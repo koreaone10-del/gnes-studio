@@ -1,82 +1,148 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const tabImage = document.getElementById('tab-image'), tabVideo = document.getElementById('tab-video');
-    const panelImage = document.getElementById('panel-image'), panelVideo = document.getElementById('panel-video');
-    function activateTab(tab) {
-        if (tab === 'image') {
-            panelImage.classList.remove('hidden'); panelVideo.classList.add('hidden');
-            tabImage.className = 'tab-btn px-6 py-3 rounded-full font-bold bg-blue-600 text-white shadow-lg transition';
-            tabVideo.className = 'tab-btn px-6 py-3 rounded-full font-bold bg-gray-700 text-gray-300 hover:bg-gray-600 transition';
-        } else {
-            panelVideo.classList.remove('hidden'); panelImage.classList.add('hidden');
-            tabVideo.className = 'tab-btn px-6 py-3 rounded-full font-bold bg-purple-600 text-white shadow-lg transition';
-            tabImage.className = 'tab-btn px-6 py-3 rounded-full font-bold bg-gray-700 text-gray-300 hover:bg-gray-600 transition';
-        }
+  const $ = id => document.getElementById(id);
+  const toast = $('toast');
+  let toastTimer;
+  function notify(message) {
+    toast.textContent = message || 'حدث خطأ غير متوقع.';
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 6500);
+  }
+  function activateTab(name) {
+    const image = name === 'image';
+    $('panel-image').classList.toggle('hidden', !image);
+    $('panel-video').classList.toggle('hidden', image);
+    $('tab-image').classList.toggle('active', image);
+    $('tab-video').classList.toggle('active', !image);
+  }
+  $('tab-image').addEventListener('click', () => activateTab('image'));
+  $('tab-video').addEventListener('click', () => activateTab('video'));
+
+  function showFiles(input, target) {
+    const files = [...input.files];
+    target.textContent = files.length
+      ? files.map(f => `${f.name} · ${(f.size / 1024 / 1024).toFixed(1)}MB`).join('  |  ')
+      : '';
+  }
+  $('image-references').addEventListener('change', e => showFiles(e.target, $('image-files')));
+  $('video-references').addEventListener('change', e => showFiles(e.target, $('video-files')));
+  $('video-mode').addEventListener('change', () => {
+    const required = $('video-mode').value === 'keyframe';
+    $('video-image-required').textContent = required ? 'REQUIRED' : 'OPTIONAL';
+    $('video-references').required = required;
+  });
+
+  async function readResponse(response) {
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || `فشل الطلب (${response.status})`);
+    return data;
+  }
+
+  $('btn-generate-image').addEventListener('click', async () => {
+    const prompt = $('image-prompt').value.trim();
+    if (!prompt) return notify('اكتب وصف الصورة أولاً.');
+    const button = $('btn-generate-image');
+    button.disabled = true;
+    button.innerHTML = '<span>◌</span> جاري توليد الصورة...';
+    $('image-empty').classList.remove('hidden');
+    $('image-empty').querySelector('b').textContent = 'يتم الآن إنشاء الصورة';
+    $('generated-image').classList.add('hidden');
+    $('download-image').classList.add('hidden');
+
+    const form = new FormData();
+    form.append('prompt', prompt);
+    form.append('size', $('image-size').value);
+    form.append('ratio', $('image-ratio').value);
+    [...$('image-references').files].forEach(file => form.append('referenceImages', file));
+
+    try {
+      const data = await readResponse(await fetch('/api/generate-image', { method: 'POST', body: form }));
+      $('generated-image').src = data.url;
+      $('generated-image').classList.remove('hidden');
+      $('image-empty').classList.add('hidden');
+      $('download-image').href = data.url;
+      $('download-image').classList.remove('hidden');
+    } catch (error) {
+      $('image-empty').querySelector('b').textContent = 'لم يكتمل التوليد';
+      notify(error.message);
+    } finally {
+      button.disabled = false;
+      button.innerHTML = '<span>✦</span> توليد الصورة <b>↗</b>';
     }
-    tabImage.addEventListener('click', () => activateTab('image')); tabVideo.addEventListener('click', () => activateTab('video'));
+  });
 
-    // Image logic (كما هو)
-    const btnGenImage = document.getElementById('btn-generate-image'), imagePrompt = document.getElementById('image-prompt');
-    const imageSize = document.getElementById('image-size'), imageRatio = document.getElementById('image-ratio'), imageRefs = document.getElementById('image-references');
-    const imageResult = document.getElementById('image-result'), generatedImage = document.getElementById('generated-image'), downloadImage = document.getElementById('download-image');
-    btnGenImage.addEventListener('click', async () => {
-        if (!imagePrompt.value.trim()) return alert('يرجى إدخال وصف للصورة.');
-        btnGenImage.disabled = true; btnGenImage.textContent = 'جاري التوليد...'; imageResult.classList.add('hidden');
-        const formData = new FormData();
-        formData.append('prompt', imagePrompt.value.trim()); formData.append('size', imageSize.value); formData.append('ratio', imageRatio.value);
-        for (const file of imageRefs.files) formData.append('referenceImages', file);
+  let pollTimer = null;
+  $('btn-generate-video').addEventListener('click', async () => {
+    const prompt = $('video-prompt').value.trim();
+    const mode = $('video-mode').value;
+    const files = [...$('video-references').files];
+    if (!prompt) return notify('اكتب وصف الفيديو أولاً.');
+    if (mode === 'keyframe' && !files.length) return notify('ارفع صورة البداية في وضع صورة إلى فيديو.');
+
+    clearInterval(pollTimer);
+    const button = $('btn-generate-video');
+    button.disabled = true;
+    button.innerHTML = '<span>◌</span> جاري إرسال الطلب...';
+    $('video-empty').classList.add('hidden');
+    $('generated-video').classList.add('hidden');
+    $('download-video').classList.add('hidden');
+    $('video-progress').classList.remove('hidden');
+    $('video-status-text').textContent = 'يتم إرسال مشروعك إلى مزود الفيديو...';
+    $('video-progress-bar').style.width = '4%';
+
+    const form = new FormData();
+    form.append('prompt', prompt);
+    form.append('mode', mode);
+    form.append('seconds', $('video-seconds').value);
+    form.append('ratio', $('video-ratio').value);
+    files.forEach(file => form.append('referenceImages', file));
+
+    try {
+      const started = await readResponse(await fetch('/api/generate-video', { method: 'POST', body: form }));
+      $('video-status-text').textContent = `تم قبول الطلب بواسطة ${started.provider}. جاري المعالجة...`;
+      let attempts = 0;
+      const poll = async () => {
+        attempts++;
         try {
-            const res = await fetch('/api/generate-image', { method: 'POST', body: formData });
-            const data = await res.json(); if (!res.ok) throw new Error(data.error);
-            generatedImage.src = data.url; downloadImage.href = data.url; imageResult.classList.remove('hidden');
-        } catch (e) { alert('خطأ: ' + e.message); } finally { btnGenImage.disabled = false; btnGenImage.textContent = '✨ توليد الصورة'; }
-    });
-
-    // Video logic (محدث لدعم المدد الطويلة والمزودين)
-    const btnGenVideo = document.getElementById('btn-generate-video'), videoPrompt = document.getElementById('video-prompt');
-    const videoMode = document.getElementById('video-mode'), videoSeconds = document.getElementById('video-seconds'), videoRatio = document.getElementById('video-ratio');
-    const videoRefs = document.getElementById('video-references'), videoResult = document.getElementById('video-result'), generatedVideo = document.getElementById('generated-video');
-    const downloadVideo = document.getElementById('download-video'), videoProgress = document.getElementById('video-progress');
-    const videoStatusText = document.getElementById('video-status-text'), videoProgressBar = document.getElementById('video-progress-bar');
-    let pollingInterval = null;
-
-    btnGenVideo.addEventListener('click', async () => {
-        if (!videoPrompt.value.trim()) return alert('يرجى إدخال وصف للفيديو.');
-        if (videoMode.value === 'keyframe' && videoRefs.files.length === 0) return alert('وضع "صورة إلى فيديو" يتطلب صورة.');
-
-        if (pollingInterval) clearInterval(pollingInterval);
-        btnGenVideo.disabled = true; btnGenVideo.textContent = 'جاري بدء المهمة...';
-        videoResult.classList.add('hidden'); videoProgress.classList.remove('hidden'); videoProgressBar.style.width = '0%';
-        videoStatusText.textContent = 'جاري إرسال الطلب (قد يستغرق الأمر بعض الوقت)...';
-
-        const formData = new FormData();
-        formData.append('prompt', videoPrompt.value.trim()); formData.append('mode', videoMode.value);
-        formData.append('seconds', videoSeconds.value); formData.append('ratio', videoRatio.value);
-        for (const file of videoRefs.files) formData.append('referenceImages', file);
-
-        try {
-            const res = await fetch('/api/generate-video', { method: 'POST', body: formData });
-            const data = await res.json(); if (!res.ok) throw new Error(data.error);
-            
-            const videoId = data.video_id;
-            videoStatusText.textContent = `المزود: ${data.provider} | جاري المعالجة...`;
-
-            pollingInterval = setInterval(async () => {
-                try {
-                    const statusRes = await fetch(`/api/video-status?video_id=${videoId}`);
-                    const statusData = await statusRes.json(); if (!statusRes.ok) throw new Error(statusData.error);
-                    videoProgressBar.style.width = (statusData.progress || 0) + '%';
-                    videoStatusText.textContent = `الحالة: ${statusData.status} (${statusData.progress || 0}%)`;
-
-                    if (statusData.status === 'completed' && statusData.url) {
-                        clearInterval(pollingInterval); videoProgress.classList.add('hidden'); videoResult.classList.remove('hidden');
-                        generatedVideo.src = statusData.url; downloadVideo.href = statusData.url;
-                    } else if (statusData.status === 'failed') {
-                        clearInterval(pollingInterval); throw new Error('فشلت عملية التوليد.');
-                    }
-                } catch (e) { clearInterval(pollingInterval); alert('خطأ: ' + e.message); videoProgress.classList.add('hidden'); }
-            }, 3000);
-        } catch (e) {
-            alert('خطأ: ' + e.message); videoProgress.classList.add('hidden');
-        } finally { btnGenVideo.disabled = false; btnGenVideo.textContent = '🎬 توليد الفيديو'; }
-    });
+          const status = await readResponse(await fetch(`/api/video-status?video_id=${encodeURIComponent(started.video_id)}`));
+          const progress = Math.max(3, Math.min(100, Number(status.progress) || Math.min(92, attempts * 4)));
+          $('video-progress-bar').style.width = `${progress}%`;
+          $('video-status-text').textContent = status.status === 'completed'
+            ? 'اكتمل الفيديو بنجاح.'
+            : `المزود: ${started.provider} · ${status.status || 'processing'}`;
+          if (status.status === 'completed' && status.url) {
+            clearInterval(pollTimer);
+            $('video-progress').classList.add('hidden');
+            $('generated-video').src = status.url;
+            $('generated-video').classList.remove('hidden');
+            $('download-video').href = status.url;
+            $('download-video').classList.remove('hidden');
+            $('generated-video').load();
+            button.disabled = false;
+            button.innerHTML = '<span>▶</span> إنشاء الفيديو <b>↗</b>';
+            return;
+          }
+          if (status.status === 'failed') throw new Error(status.error || 'أخفق مزود الفيديو في إنشاء النتيجة.');
+          if (attempts >= 120) throw new Error('استغرق التوليد وقتاً أطول من المتوقع. تحقق لاحقاً من حالة الخدمة.');
+        } catch (error) {
+          clearInterval(pollTimer);
+          $('video-progress').classList.add('hidden');
+          $('video-empty').classList.remove('hidden');
+          notify(error.message);
+          button.disabled = false;
+          button.innerHTML = '<span>▶</span> إنشاء الفيديو <b>↗</b>';
+        }
+      };
+      await poll();
+      if (attempts < 120 && !$('video-progress').classList.contains('hidden')) {
+        pollTimer = setInterval(poll, 5000);
+      }
+    } catch (error) {
+      $('video-progress').classList.add('hidden');
+      $('video-empty').classList.remove('hidden');
+      notify(error.message);
+      button.disabled = false;
+      button.innerHTML = '<span>▶</span> إنشاء الفيديو <b>↗</b>';
+    }
+  });
 });

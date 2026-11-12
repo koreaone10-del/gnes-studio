@@ -1,101 +1,111 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agnes Studio | استوديو الإبداع</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#090b14">
+  <meta name="description" content="Agnes Studio — مساحة إبداعية لتوليد الصور والفيديو بالذكاء الاصطناعي.">
+  <title>Agnes Studio — AI Creative Lab</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
 </head>
-<body class="bg-gray-900 text-white font-sans min-h-screen p-4 md:p-8">
-    <div class="max-w-4xl mx-auto">
-        <header class="text-center mb-10">
-            <h1 class="text-5xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent mb-2">Agnes Studio</h1>
-            <p class="text-gray-400 text-lg">منصة توليد الصور والفيديو بالذكاء الاصطناعي — مجانية بالكامل</p>
-        </header>
+<body>
+  <div class="ambient ambient-a"></div><div class="ambient ambient-b"></div>
+  <main class="shell">
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="Agnes Studio home">
+        <span class="brand-mark">A<span>✦</span></span>
+        <span><b>AGNES</b><small>CREATIVE STUDIO</small></span>
+      </a>
+      <div class="top-status"><i></i><span>مساحة الإبداع الذكي</span></div>
+    </header>
 
-        <div class="flex justify-center gap-4 mb-8">
-            <button id="tab-image" class="tab-btn px-6 py-3 rounded-full font-bold bg-blue-600 text-white shadow-lg transition">توليد الصور</button>
-            <button id="tab-video" class="tab-btn px-6 py-3 rounded-full font-bold bg-gray-700 text-gray-300 hover:bg-gray-600 transition">توليد الفيديو</button>
-        </div>
+    <section class="hero">
+      <div class="hero-copy">
+        <div class="eyebrow"><span></span> AI CREATION WORKSPACE</div>
+        <h1>حوّل <em>خيالك</em><br>إلى واقع مرئي.</h1>
+        <p>استوديو واحد لتوليد الصور وصناعة الفيديو. اكتب فكرتك، اختر الإعدادات، ودع الذكاء الاصطناعي يتولى الباقي.</p>
+        <div class="hero-tags"><span>✦ Image Lab</span><span>◈ Motion Studio</span><span>⌁ Smart Routing</span></div>
+      </div>
+      <div class="hero-art" aria-hidden="true">
+        <div class="orb orb-one"></div><div class="orb orb-two"></div><div class="art-core">A<span>✦</span></div>
+        <div class="art-label label-top">IMAGINE</div><div class="art-label label-bottom">GENERATE</div>
+      </div>
+    </section>
 
-        <div id="panel-image" class="panel space-y-6">
-            <div class="bg-gray-800 p-6 rounded-2xl shadow-xl border border-gray-700">
-                <label class="block text-sm font-bold mb-2 text-gray-300">البرومبت (وصف الصورة)</label>
-                <textarea id="image-prompt" rows="3" class="w-full bg-gray-900 border border-gray-700 rounded-xl p-4 text-white focus:ring-2 focus:ring-blue-500 outline-none" placeholder="مثال: مدينة مستقبلية بألوان نيون..."></textarea>
-                <div class="grid grid-cols-2 gap-4 mt-4">
-                    <div>
-                        <label class="block text-sm mb-2 text-gray-400">الحجم</label>
-                        <select id="image-size" class="w-full bg-gray-900 border border-gray-700 rounded-xl p-3 text-white">
-                            <option value="1K">1K</option><option value="2K" selected>2K</option><option value="4K">4K</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm mb-2 text-gray-400">نسبة العرض</label>
-                        <select id="image-ratio" class="w-full bg-gray-900 border border-gray-700 rounded-xl p-3 text-white">
-                            <option value="16:9" selected>16:9 (أفقي)</option><option value="9:16">9:16 (عمودي)</option><option value="1:1">1:1 (مربع)</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="mt-4">
-                    <label class="block text-sm mb-2 text-gray-400">صور مرجعية (اختياري)</label>
-                    <input type="file" id="image-references" multiple accept="image/*" class="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-blue-600 file:text-white cursor-pointer">
-                </div>
-                <button id="btn-generate-image" class="mt-6 w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl font-bold text-lg shadow-lg hover:from-blue-700 hover:to-purple-700 transition">✨ توليد الصورة</button>
-            </div>
-            <div id="image-result" class="hidden bg-gray-800 p-4 rounded-2xl border border-gray-700 text-center">
-                <img id="generated-image" class="w-full rounded-xl max-h-[500px] object-contain" alt="الصورة المولدة">
-                <a id="download-image" href="#" download class="inline-block mt-4 px-6 py-2 bg-green-600 rounded-full font-bold hover:bg-green-700 transition">تحميل الصورة</a>
-            </div>
+    <section class="workspace">
+      <div class="workspace-head">
+        <div><span class="section-kicker">YOUR WORKSPACE</span><h2>ابدأ مشروعك</h2></div>
+        <div class="tabs" role="tablist">
+          <button id="tab-image" class="tab active" type="button"><span>▧</span> توليد الصور</button>
+          <button id="tab-video" class="tab" type="button"><span>▶</span> توليد الفيديو</button>
         </div>
+      </div>
 
-        <div id="panel-video" class="panel hidden space-y-6">
-            <div class="bg-gray-800 p-6 rounded-2xl shadow-xl border border-gray-700">
-                <label class="block text-sm font-bold mb-2 text-gray-300">البرومبت (وصف الفيديو)</label>
-                <textarea id="video-prompt" rows="3" class="w-full bg-gray-900 border border-gray-700 rounded-xl p-4 text-white focus:ring-2 focus:ring-purple-500 outline-none" placeholder="مثال: رجل يسير في مدينة مستقبلية..."></textarea>
-                <div class="grid grid-cols-2 gap-4 mt-4">
-                    <div>
-                        <label class="block text-sm mb-2 text-gray-400">طريقة التوليد</label>
-                        <select id="video-mode" class="w-full bg-gray-900 border border-gray-700 rounded-xl p-3 text-white">
-                            <option value="text" selected>نص فقط (إنشاء من الصفر)</option>
-                            <option value="keyframe">صورة إلى فيديو (تحريك صورة)</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm mb-2 text-gray-400">المدة (ثوانٍ)</label>
-                        <select id="video-seconds" class="w-full bg-gray-900 border border-gray-700 rounded-xl p-3 text-white">
-                            <option value="4" selected>4 ثوانٍ</option>
-                            <option value="8">8 ثوانٍ</option>
-                            <option value="12">12 ثانية</option>
-                            <option value="15">15 ثانية (مزود بديل)</option>
-                            <option value="30">30 ثانية (مزود بديل)</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="mt-4">
-                    <label class="block text-sm mb-2 text-gray-400">نسبة العرض</label>
-                    <select id="video-ratio" class="w-full bg-gray-900 border border-gray-700 rounded-xl p-3 text-white">
-                        <option value="16:9" selected>16:9 (أفقي)</option><option value="9:16">9:16 (عمودي)</option><option value="1:1">1:1 (مربع)</option>
-                    </select>
-                </div>
-                <div class="mt-4">
-                    <label class="block text-sm mb-2 text-gray-400">صور (مطلوبة فقط في وضع "صورة إلى فيديو")</label>
-                    <input type="file" id="video-references" multiple accept="image/*" class="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-purple-600 file:text-white cursor-pointer">
-                </div>
-                <button id="btn-generate-video" class="mt-6 w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl font-bold text-lg shadow-lg hover:from-purple-700 hover:to-pink-700 transition">🎬 توليد الفيديو</button>
+      <section id="panel-image" class="panel">
+        <div class="panel-grid">
+          <div class="form-column">
+            <label class="field-label" for="image-prompt">وصف الصورة <span>IMAGE PROMPT</span></label>
+            <textarea id="image-prompt" rows="4" placeholder="صف الصورة التي تتخيلها بالتفصيل... مثال: مشهد سينمائي لمدينة مستقبلية عند الغروب، إضاءة ذهبية وتفاصيل فائقة."></textarea>
+            <div class="settings-row">
+              <div class="field"><label for="image-size">الجودة</label><select id="image-size"><option value="1K">1K</option><option value="2K" selected>2K</option><option value="4K">4K</option></select></div>
+              <div class="field"><label for="image-ratio">الأبعاد</label><select id="image-ratio"><option value="16:9">أفقي 16:9</option><option value="9:16">عمودي 9:16</option><option value="1:1">مربع 1:1</option></select></div>
             </div>
-            <div id="video-progress" class="hidden bg-gray-800 p-6 rounded-2xl border border-gray-700 text-center">
-                <p id="video-status-text" class="text-lg mb-2">جاري معالجة الفيديو...</p>
-                <div class="w-full bg-gray-700 rounded-full h-4 overflow-hidden">
-                    <div id="video-progress-bar" class="bg-gradient-to-r from-purple-500 to-pink-500 h-4 rounded-full transition-all duration-500" style="width: 0%"></div>
-                </div>
+            <label class="field-label">صور مرجعية <span>OPTIONAL · MAX 5</span></label>
+            <label class="dropzone" for="image-references"><b>＋</b><span>اضغط لاختيار الصور</span><small>JPG · PNG · WEBP — حتى 15MB للصورة</small><input id="image-references" type="file" accept="image/jpeg,image/png,image/webp" multiple></label>
+            <div id="image-files" class="file-list"></div>
+            <button id="btn-generate-image" class="primary-btn image-btn"><span>✦</span> توليد الصورة <b>↗</b></button>
+          </div>
+          <div class="preview-column">
+            <div class="preview-head"><span>PREVIEW CANVAS</span><i>● READY</i></div>
+            <div id="image-result" class="result-canvas">
+              <div id="image-empty" class="empty-state"><div class="empty-icon">▧</div><b>مساحتك الإبداعية</b><p>ستظهر الصورة الناتجة هنا بعد اكتمال التوليد.</p></div>
+              <img id="generated-image" class="hidden" alt="الصورة المولدة">
             </div>
-            <div id="video-result" class="hidden bg-gray-800 p-4 rounded-2xl border border-gray-700 text-center">
-                <video id="generated-video" controls class="w-full rounded-xl max-h-[500px]"></video>
-                <a id="download-video" href="#" download class="inline-block mt-4 px-6 py-2 bg-green-600 rounded-full font-bold hover:bg-green-700 transition">تحميل الفيديو</a>
-            </div>
+            <a id="download-image" class="download-btn hidden" href="#" download="agnes-image.png">تحميل الصورة <span>↓</span></a>
+          </div>
         </div>
-    </div>
-    <script src="app.js"></script>
+      </section>
+
+      <section id="panel-video" class="panel hidden">
+        <div class="panel-grid">
+          <div class="form-column">
+            <label class="field-label" for="video-prompt">وصف الفيديو <span>VIDEO PROMPT</span></label>
+            <textarea id="video-prompt" rows="4" placeholder="اكتب المشهد والحركة والكاميرا والإضاءة..."></textarea>
+            <div class="settings-row">
+              <div class="field"><label for="video-mode">طريقة الإنشاء</label><select id="video-mode"><option value="text">نص إلى فيديو</option><option value="keyframe">صورة إلى فيديو</option></select></div>
+              <div class="field"><label for="video-seconds">المدة</label><select id="video-seconds"><option value="4">4 ثوانٍ</option><option value="8">8 ثوانٍ</option><option value="12">12 ثانية</option><option value="15">15 ثانية</option><option value="30">30 ثانية</option></select></div>
+            </div>
+            <div class="settings-row">
+              <div class="field full"><label for="video-ratio">نسبة العرض</label><select id="video-ratio"><option value="16:9">أفقي 16:9</option><option value="9:16">عمودي 9:16</option><option value="1:1">مربع 1:1</option></select></div>
+            </div>
+            <label class="field-label">الصورة المرجعية <span id="video-image-required">OPTIONAL</span></label>
+            <label class="dropzone" for="video-references"><b>＋</b><span>اختر صورة البداية</span><small>JPG · PNG · WEBP — حتى 15MB</small><input id="video-references" type="file" accept="image/jpeg,image/png,image/webp"></label>
+            <div id="video-files" class="file-list"></div>
+            <button id="btn-generate-video" class="primary-btn video-btn"><span>▶</span> إنشاء الفيديو <b>↗</b></button>
+            <p class="fine-print">قد تختلف الإتاحة والمدة حسب رصيد وحدود مزود الذكاء الاصطناعي.</p>
+          </div>
+          <div class="preview-column">
+            <div class="preview-head"><span>MOTION PREVIEW</span><i>● STANDBY</i></div>
+            <div class="result-canvas video-canvas">
+              <div id="video-empty" class="empty-state"><div class="empty-icon">▶</div><b>المشهد يبدأ من هنا</b><p>سيظهر الفيديو النهائي هنا بعد المعالجة.</p></div>
+              <video id="generated-video" class="hidden" controls playsinline></video>
+              <div id="video-progress" class="progress-card hidden">
+                <div class="loader"></div><b id="video-status-text">جاري تجهيز مشروعك...</b>
+                <div class="progress-track"><div id="video-progress-bar"></div></div>
+                <small>اترك الصفحة مفتوحة حتى تنتهي المعالجة.</small>
+              </div>
+            </div>
+            <a id="download-video" class="download-btn hidden" href="#" download="agnes-video.mp4">تحميل الفيديو <span>↓</span></a>
+          </div>
+        </div>
+      </section>
+    </section>
+    <footer><span>AGNES STUDIO <b>v1.1</b></span><span>صُنع للإبداع · Built for imagination</span></footer>
+  </main>
+  <div id="toast" class="toast" role="status"></div>
+  <script src="/app.js" defer></script>
 </body>
 </html>
