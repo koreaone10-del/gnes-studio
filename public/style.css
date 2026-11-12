@@ -1,31 +1,5 @@
-@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap');
-
-body {
-    font-family: 'Tajawal', sans-serif;
-    background: radial-gradient(circle at top right, #1a1a2e, #16213e);
-    min-height: 100vh;
-}
-
-.tab-btn {
-    transition: all 0.3s ease;
-}
-
-.panel {
-    animation: fadeIn 0.5s ease-in-out;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-::-webkit-scrollbar {
-    width: 8px;
-}
-::-webkit-scrollbar-track {
-    background: #1a1a2e;
-}
-::-webkit-scrollbar-thumb {
-    background: #4a4a6a;
-    border-radius: 4px;
-}
+body { background: radial-gradient(circle at top right, #1a1a2e, #16213e); min-height: 100vh; font-family: system-ui, -apple-system, sans-serif; }
+.tab-btn { transition: all 0.3s ease; }
+.panel { animation: fadeIn 0.5s ease-in-out; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+::-webkit-scrollbar { width: 8px; } ::-webkit-scrollbar-track { background: #1a1a2e; } ::-webkit-scrollbar-thumb { background: #4a4a6a; border-radius: 4px; }
