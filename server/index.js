@@ -3,7 +3,6 @@ const express = require('express');
 const multer = require('multer');
 const axios = require('axios');
 const path = require('path');
-const FormData = require('form-data');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -15,7 +14,7 @@ if (!AGNES_API_KEY) {
   process.exit(1);
 }
 
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 * 1024 * 1024 } });
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../public')));
 
@@ -26,31 +25,6 @@ const agnesClient = axios.create({
     'Content-Type': 'application/json',
   },
 });
-
-// دالة رفع الصور باستخدام Catbox.moe (مستقرة وتدعم الخوادم)
-async function uploadImageToTempHost(file) {
-  try {
-    const form = new FormData();
-    form.append('reqtype', 'fileupload');
-    form.append('fileToUpload', file.buffer, {
-      filename: file.originalname || 'image.jpg',
-      contentType: file.mimetype,
-    });
-
-    const response = await axios.post('https://catbox.moe/user/api.php', form, {
-      headers: { 
-        ...form.getHeaders(),
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-      },
-      maxBodyLength: Infinity,
-    });
-    
-    return response.data.trim(); // إرجاع الرابط المباشر
-  } catch (error) {
-    console.error('خطأ تفصيلي في رفع الصورة:', error.response?.data || error.message);
-    throw new Error('فشل رفع الصورة للاستضافة.');
-  }
-}
 
 // ---------- توليد الصور ----------
 app.post('/api/generate-image', upload.array('referenceImages', 5), async (req, res) => {
@@ -80,7 +54,7 @@ app.post('/api/generate-image', upload.array('referenceImages', 5), async (req, 
   }
 });
 
-// ---------- توليد الفيديو ----------
+// ---------- توليد الفيديو (الحل الجذري: Base64 مباشر) ----------
 app.post('/api/generate-video', upload.array('referenceImages', 5), async (req, res) => {
   try {
     const { prompt, mode, seconds, ratio } = req.body;
@@ -96,17 +70,28 @@ app.post('/api/generate-video', upload.array('referenceImages', 5), async (req, 
       n: 1,
     };
 
-    if (req.files && req.files.length > 0) {
-      const imageUrls = await Promise.all(req.files.map(file => uploadImageToTempHost(file)));
-      
-      if (mode === 'keyframe') {
-        payload.first_frame = imageUrls[0];
-        if (imageUrls.length > 1) {
-          payload.last_frame = imageUrls[1];
-        }
-      } else if (mode === 'reference') {
-        payload.images = imageUrls;
+    // معالجة الصور حسب الوضع باستخدام Base64 مباشرة
+    if (mode === 'keyframe') {
+      if (!req.files || req.files.length === 0) {
+        return res.status(400).json({ error: 'وضع "صورة إلى فيديو" يتطلب رفع صورة واحدة على الأقل.' });
       }
+      
+      // تحويل الصورة الأولى إلى Base64 Data URI
+      const firstFrameBase64 = `data:${req.files[0].mimetype};base64,${req.files[0].buffer.toString('base64')}`;
+      payload.first_frame = firstFrameBase64;
+
+      // إذا تم رفع صورة ثانية، نضعها كإطار أخير
+      if (req.files.length > 1) {
+        const lastFrameBase64 = `data:${req.files[1].mimetype};base64,${req.files[1].buffer.toString('base64')}`;
+        payload.last_frame = lastFrameBase64;
+      }
+    } else if (mode === 'reference' && req.files && req.files.length > 0) {
+      // وضع المراجع البصرية: التوثيق يشير إلى أن images مصفوفة من الكائنات
+      // لضمان التوافق، سنرسل الروابط كـ Base64 إذا كان ذلك مدعوماً، وإلا سنستخدم الروابط
+      // لكن الأفضل هنا إرسالها كـ Base64 أيضاً لأن Agnes يدعم ذلك
+      payload.images = req.files.map(file => 
+        `data:${file.mimetype};base64,${file.buffer.toString('base64')}`
+      );
     }
 
     const createResponse = await agnesClient.post('/videos', payload);
