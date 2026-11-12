@@ -126,11 +126,15 @@ function normalizeMagicStatus(data) {
     data?.assets?.[0]?.url ||
     null;
 
-  let status = failed ? 'failed' : complete || url ? 'completed' : 'processing';
+  let status = failed ? 'failed' : complete && url ? 'completed' : 'processing';
   let progress = Number(data?.progress);
   if (!Number.isFinite(progress)) progress = status === 'completed' ? 100 : 0;
 
-  return { status, progress, url, error: data?.error?.message || data?.message || null };
+  const error = complete && !url
+    ? 'المزود أعلن انتهاء المهمة لكنه لم يرجع رابط الفيديو.'
+    : data?.error?.message || data?.message || null;
+
+  return { status, progress, url, error };
 }
 
 app.get('/api/health', (req, res) => {
@@ -328,10 +332,12 @@ app.get('/api/video-status', async (req, res) => {
       const failed = ['failed', 'error', 'cancelled', 'canceled'].includes(status);
       const url = data.url || data.video_url || data.output_url || data.result?.url || null;
       return res.json({
-        status: failed ? 'failed' : completed || url ? 'completed' : 'processing',
+        status: failed ? 'failed' : completed && url ? 'completed' : 'processing',
         progress: Number(data.progress) || (url ? 100 : 0),
         url,
-        error: data.error?.message || data.message || null
+        error: completed && !url
+          ? 'المزود أعلن انتهاء المهمة دون إرجاع رابط الفيديو.'
+          : data.error?.message || data.message || null
       });
     }
 
