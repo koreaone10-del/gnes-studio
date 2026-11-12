@@ -27,22 +27,28 @@ const agnesClient = axios.create({
   },
 });
 
-// دالة لرفع الصور إلى استضافة مؤقتة للحصول على رابط عام (مطلوب للفيديو)
+// دالة رفع الصور باستخدام Catbox.moe (مستقرة وتدعم الخوادم)
 async function uploadImageToTempHost(file) {
   try {
     const form = new FormData();
-    form.append('file', file.buffer, {
-      filename: file.originalname,
+    form.append('reqtype', 'fileupload');
+    form.append('fileToUpload', file.buffer, {
+      filename: file.originalname || 'image.jpg',
       contentType: file.mimetype,
     });
-    const response = await axios.post('https://0x0.st', form, {
-      headers: { ...form.getHeaders() },
+
+    const response = await axios.post('https://catbox.moe/user/api.php', form, {
+      headers: { 
+        ...form.getHeaders(),
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      },
       maxBodyLength: Infinity,
     });
-    return response.data.trim();
+    
+    return response.data.trim(); // إرجاع الرابط المباشر
   } catch (error) {
-    console.error('خطأ في رفع الصورة:', error.message);
-    throw new Error('فشل رفع الصورة للخادم المؤقت.');
+    console.error('خطأ تفصيلي في رفع الصورة:', error.response?.data || error.message);
+    throw new Error('فشل رفع الصورة للاستضافة.');
   }
 }
 
@@ -61,7 +67,6 @@ app.post('/api/generate-image', upload.array('referenceImages', 5), async (req, 
     };
 
     if (req.files && req.files.length > 0) {
-      // توليد الصور يدعم Base64 كما كان يعمل سابقاً
       payload.extra_body.image = req.files.map(file => 
         `data:${file.mimetype};base64,${file.buffer.toString('base64')}`
       );
@@ -92,7 +97,6 @@ app.post('/api/generate-video', upload.array('referenceImages', 5), async (req, 
     };
 
     if (req.files && req.files.length > 0) {
-      // الفيديو يتطلب روابط عامة (URLs) كما في التوثيق
       const imageUrls = await Promise.all(req.files.map(file => uploadImageToTempHost(file)));
       
       if (mode === 'keyframe') {
