@@ -3,7 +3,7 @@ const express = require('express');
 const multer = require('multer');
 const axios = require('axios');
 const path = require('path');
-const FormData = require('form-data'); // لرفع الصور
+const FormData = require('form-data');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -27,7 +27,7 @@ const agnesClient = axios.create({
   },
 });
 
-// دالة مساعدة لرفع الصور إلى خدمة استضافة مجانية (0x0.st)
+// دالة لرفع الصور إلى استضافة مؤقتة للحصول على رابط عام (مطلوب للفيديو)
 async function uploadImageToTempHost(file) {
   try {
     const form = new FormData();
@@ -39,10 +39,10 @@ async function uploadImageToTempHost(file) {
       headers: { ...form.getHeaders() },
       maxBodyLength: Infinity,
     });
-    return response.data.trim(); // إرجاع الرابط العام
+    return response.data.trim();
   } catch (error) {
     console.error('خطأ في رفع الصورة:', error.message);
-    throw new Error('فشل رفع الصورة إلى خادم مؤقت.');
+    throw new Error('فشل رفع الصورة للخادم المؤقت.');
   }
 }
 
@@ -61,15 +61,17 @@ app.post('/api/generate-image', upload.array('referenceImages', 5), async (req, 
     };
 
     if (req.files && req.files.length > 0) {
-      const imageUrls = await Promise.all(req.files.map(file => uploadImageToTempHost(file)));
-      payload.extra_body.image = imageUrls;
+      // توليد الصور يدعم Base64 كما كان يعمل سابقاً
+      payload.extra_body.image = req.files.map(file => 
+        `data:${file.mimetype};base64,${file.buffer.toString('base64')}`
+      );
     }
 
     const response = await agnesClient.post('/images/generations', payload);
     res.json({ url: response.data.data[0].url });
   } catch (error) {
     console.error('خطأ في توليد الصورة:', error.response?.data || error.message);
-    res.status(500).json({ error: error.message || 'فشل توليد الصورة.' });
+    res.status(500).json({ error: error.response?.data?.message || 'فشل توليد الصورة.' });
   }
 });
 
@@ -84,13 +86,13 @@ app.post('/api/generate-video', upload.array('referenceImages', 5), async (req, 
       prompt: prompt,
       mode: mode || 'text',
       seconds: String(seconds || '4'),
-      size: '720P', // إجباري لنموذج Flash
+      size: '720P',
       aspect_ratio: ratio || '16:9',
       n: 1,
     };
 
-    // رفع الصور أولاً للحصول على روابط عامة
     if (req.files && req.files.length > 0) {
+      // الفيديو يتطلب روابط عامة (URLs) كما في التوثيق
       const imageUrls = await Promise.all(req.files.map(file => uploadImageToTempHost(file)));
       
       if (mode === 'keyframe') {
@@ -131,11 +133,9 @@ app.get('/api/video-status', async (req, res) => {
     });
 
     const data = response.data;
-    const videoUrl = data.url || null;
-
     res.json({
       status: data.status,
-      url: videoUrl,
+      url: data.url || null,
       progress: data.progress || 0,
     });
   } catch (error) {
