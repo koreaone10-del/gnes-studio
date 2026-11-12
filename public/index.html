@@ -3,59 +3,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agnes Studio | استوديو الإبداع بالذكاء الاصطناعي</title>
+    <title>Agnes Studio | استوديو الإبداع</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
 </head>
-<body class="bg-gray-900 text-white font-['Tajawal'] min-h-screen p-4 md:p-8">
+<body class="bg-gray-900 text-white font-sans min-h-screen p-4 md:p-8">
     <div class="max-w-4xl mx-auto">
-        <!-- Header -->
         <header class="text-center mb-10">
             <h1 class="text-5xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent mb-2">Agnes Studio</h1>
             <p class="text-gray-400 text-lg">منصة توليد الصور والفيديو بالذكاء الاصطناعي — مجانية بالكامل</p>
         </header>
 
-        <!-- Tabs -->
         <div class="flex justify-center gap-4 mb-8">
             <button id="tab-image" class="tab-btn px-6 py-3 rounded-full font-bold bg-blue-600 text-white shadow-lg transition">توليد الصور</button>
             <button id="tab-video" class="tab-btn px-6 py-3 rounded-full font-bold bg-gray-700 text-gray-300 hover:bg-gray-600 transition">توليد الفيديو</button>
         </div>
 
-        <!-- Image Generation Panel -->
         <div id="panel-image" class="panel space-y-6">
             <div class="bg-gray-800 p-6 rounded-2xl shadow-xl border border-gray-700">
                 <label class="block text-sm font-bold mb-2 text-gray-300">البرومبت (وصف الصورة)</label>
                 <textarea id="image-prompt" rows="3" class="w-full bg-gray-900 border border-gray-700 rounded-xl p-4 text-white focus:ring-2 focus:ring-blue-500 outline-none" placeholder="مثال: مدينة مستقبلية بألوان نيون..."></textarea>
-                
                 <div class="grid grid-cols-2 gap-4 mt-4">
                     <div>
                         <label class="block text-sm mb-2 text-gray-400">الحجم</label>
                         <select id="image-size" class="w-full bg-gray-900 border border-gray-700 rounded-xl p-3 text-white">
-                            <option value="1K">1K</option>
-                            <option value="2K" selected>2K</option>
-                            <option value="3K">3K</option>
-                            <option value="4K">4K</option>
+                            <option value="1K">1K</option><option value="2K" selected>2K</option><option value="4K">4K</option>
                         </select>
                     </div>
                     <div>
                         <label class="block text-sm mb-2 text-gray-400">نسبة العرض</label>
                         <select id="image-ratio" class="w-full bg-gray-900 border border-gray-700 rounded-xl p-3 text-white">
-                            <option value="16:9" selected>16:9 (أفقي)</option>
-                            <option value="9:16">9:16 (عمودي)</option>
-                            <option value="1:1">1:1 (مربع)</option>
-                            <option value="4:3">4:3</option>
-                            <option value="3:2">3:2</option>
+                            <option value="16:9" selected>16:9 (أفقي)</option><option value="9:16">9:16 (عمودي)</option><option value="1:1">1:1 (مربع)</option>
                         </select>
                     </div>
                 </div>
-
                 <div class="mt-4">
                     <label class="block text-sm mb-2 text-gray-400">صور مرجعية (اختياري)</label>
-                    <input type="file" id="image-references" multiple accept="image/*" class="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-blue-600 file:text-white hover:file:bg-blue-700 cursor-pointer">
+                    <input type="file" id="image-references" multiple accept="image/*" class="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-blue-600 file:text-white cursor-pointer">
                 </div>
-
-                <button id="btn-generate-image" class="mt-6 w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl font-bold text-lg shadow-lg hover:from-blue-700 hover:to-purple-700 transition disabled:opacity-50">✨ توليد الصورة</button>
+                <button id="btn-generate-image" class="mt-6 w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl font-bold text-lg shadow-lg hover:from-blue-700 hover:to-purple-700 transition">✨ توليد الصورة</button>
             </div>
             <div id="image-result" class="hidden bg-gray-800 p-4 rounded-2xl border border-gray-700 text-center">
                 <img id="generated-image" class="w-full rounded-xl max-h-[500px] object-contain" alt="الصورة المولدة">
@@ -63,47 +49,41 @@
             </div>
         </div>
 
-        <!-- Video Generation Panel -->
         <div id="panel-video" class="panel hidden space-y-6">
             <div class="bg-gray-800 p-6 rounded-2xl shadow-xl border border-gray-700">
                 <label class="block text-sm font-bold mb-2 text-gray-300">البرومبت (وصف الفيديو)</label>
-                <textarea id="video-prompt" rows="3" class="w-full bg-gray-900 border border-gray-700 rounded-xl p-4 text-white focus:ring-2 focus:ring-purple-500 outline-none" placeholder="مثال: قطة صغيرة تلعب في الحديقة..."></textarea>
-
+                <textarea id="video-prompt" rows="3" class="w-full bg-gray-900 border border-gray-700 rounded-xl p-4 text-white focus:ring-2 focus:ring-purple-500 outline-none" placeholder="مثال: رجل يسير في مدينة مستقبلية..."></textarea>
                 <div class="grid grid-cols-2 gap-4 mt-4">
                     <div>
                         <label class="block text-sm mb-2 text-gray-400">طريقة التوليد</label>
                         <select id="video-mode" class="w-full bg-gray-900 border border-gray-700 rounded-xl p-3 text-white">
                             <option value="text" selected>نص فقط (إنشاء من الصفر)</option>
                             <option value="keyframe">صورة إلى فيديو (تحريك صورة)</option>
-                            <option value="reference">مراجع بصرية (تطبيق ستايل)</option>
                         </select>
                     </div>
                     <div>
                         <label class="block text-sm mb-2 text-gray-400">المدة (ثوانٍ)</label>
                         <select id="video-seconds" class="w-full bg-gray-900 border border-gray-700 rounded-xl p-3 text-white">
-                            <option value="4" selected>4 ثوانٍ (موصى به)</option>
-                            <option value="5">5 ثوانٍ</option>
-                            <option value="6">6 ثوانٍ</option>
+                            <option value="4" selected>4 ثوانٍ</option>
+                            <option value="8">8 ثوانٍ</option>
+                            <option value="12">12 ثانية</option>
+                            <option value="15">15 ثانية (مزود بديل)</option>
+                            <option value="30">30 ثانية (مزود بديل)</option>
                         </select>
                     </div>
                 </div>
                 <div class="mt-4">
                     <label class="block text-sm mb-2 text-gray-400">نسبة العرض</label>
                     <select id="video-ratio" class="w-full bg-gray-900 border border-gray-700 rounded-xl p-3 text-white">
-                        <option value="16:9" selected>16:9 (أفقي)</option>
-                        <option value="9:16">9:16 (عمودي)</option>
-                        <option value="1:1">1:1 (مربع)</option>
+                        <option value="16:9" selected>16:9 (أفقي)</option><option value="9:16">9:16 (عمودي)</option><option value="1:1">1:1 (مربع)</option>
                     </select>
                 </div>
-
                 <div class="mt-4">
-                    <label class="block text-sm mb-2 text-gray-400">صور (مطلوبة في وضع "صورة إلى فيديو")</label>
-                    <input type="file" id="video-references" multiple accept="image/*" class="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-purple-600 file:text-white hover:file:bg-purple-700 cursor-pointer">
+                    <label class="block text-sm mb-2 text-gray-400">صور (مطلوبة فقط في وضع "صورة إلى فيديو")</label>
+                    <input type="file" id="video-references" multiple accept="image/*" class="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-purple-600 file:text-white cursor-pointer">
                 </div>
-
-                <button id="btn-generate-video" class="mt-6 w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl font-bold text-lg shadow-lg hover:from-purple-700 hover:to-pink-700 transition disabled:opacity-50">🎬 توليد الفيديو</button>
+                <button id="btn-generate-video" class="mt-6 w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl font-bold text-lg shadow-lg hover:from-purple-700 hover:to-pink-700 transition">🎬 توليد الفيديو</button>
             </div>
-
             <div id="video-progress" class="hidden bg-gray-800 p-6 rounded-2xl border border-gray-700 text-center">
                 <p id="video-status-text" class="text-lg mb-2">جاري معالجة الفيديو...</p>
                 <div class="w-full bg-gray-700 rounded-full h-4 overflow-hidden">
