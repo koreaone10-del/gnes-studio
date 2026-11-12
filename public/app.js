@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // التبديل بين التبويبات
+    // --- التبديل بين التبويبات ---
     const tabImage = document.getElementById('tab-image');
     const tabVideo = document.getElementById('tab-video');
     const panelImage = document.getElementById('panel-image');
@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
     tabImage.addEventListener('click', () => activateTab('image'));
     tabVideo.addEventListener('click', () => activateTab('video'));
 
-    // ---------- توليد الصور ----------
+    // --- توليد الصور ---
     const btnGenImage = document.getElementById('btn-generate-image');
     const imagePrompt = document.getElementById('image-prompt');
     const imageSize = document.getElementById('image-size');
@@ -69,7 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // ---------- توليد الفيديو ----------
+    // --- توليد الفيديو ---
     const btnGenVideo = document.getElementById('btn-generate-video');
     const videoPrompt = document.getElementById('video-prompt');
     const videoMode = document.getElementById('video-mode');
@@ -87,27 +87,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
     btnGenVideo.addEventListener('click', async () => {
         const prompt = videoPrompt.value.trim();
+        const mode = videoMode.value;
+        
         if (!prompt) return alert('يرجى إدخال وصف للفيديو.');
 
-        // التحقق من الإطارات إذا كان الوضع "صورة إلى فيديو"
-        if (videoMode.value === 'keyframe' && videoRefs.files.length === 0) {
-            return alert('وضع "صورة إلى فيديو" يتطلب اختيار صورة واحدة على الأقل.');
+        // التحقق من الصور بناءً على الوضع
+        if ((mode === 'keyframe' || mode === 'reference') && videoRefs.files.length === 0) {
+            return alert(`الوضع المختار (${mode === 'keyframe' ? 'صورة إلى فيديو' : 'مراجع بصرية'}) يتطلب اختيار صورة واحدة على الأقل.`);
         }
 
         if (pollingInterval) clearInterval(pollingInterval);
 
         btnGenVideo.disabled = true;
-        btnGenVideo.textContent = 'جاري الرفع والبدء...';
+        btnGenVideo.textContent = 'جاري بدء المهمة...';
         videoResult.classList.add('hidden');
         videoProgress.classList.remove('hidden');
         videoProgressBar.style.width = '0%';
-        videoStatusText.textContent = 'جاري إرسال الطلب (قد يستغرق رفع الصور ثوانٍ)...';
+        videoStatusText.textContent = 'جاري إرسال الطلب...';
 
         const formData = new FormData();
         formData.append('prompt', prompt);
-        formData.append('mode', videoMode.value);
+        formData.append('mode', mode);
         formData.append('seconds', videoSeconds.value);
         formData.append('ratio', videoRatio.value);
+        
         for (const file of videoRefs.files) {
             formData.append('referenceImages', file);
         }
@@ -120,6 +123,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const videoId = data.video_id;
             videoStatusText.textContent = 'تم بدء المعالجة، جاري التوليد...';
 
+            // متابعة الحالة كل 3 ثوانٍ
             pollingInterval = setInterval(async () => {
                 try {
                     const statusRes = await fetch(`/api/video-status?video_id=${videoId}`);
@@ -138,14 +142,14 @@ document.addEventListener('DOMContentLoaded', () => {
                         downloadVideo.download = 'agnes-video.mp4';
                     } else if (statusData.status === 'failed') {
                         clearInterval(pollingInterval);
-                        throw new Error('فشلت عملية التوليد.');
+                        throw new Error('فشلت عملية التوليد من الخادم.');
                     }
                 } catch (pollError) {
                     clearInterval(pollingInterval);
                     alert('خطأ في متابعة الحالة: ' + pollError.message);
                     videoProgress.classList.add('hidden');
                 }
-            }, 3000); // التحقق كل 3 ثوانٍ
+            }, 3000);
 
         } catch (error) {
             alert('خطأ: ' + error.message);
