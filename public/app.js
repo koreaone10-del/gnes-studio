@@ -48,16 +48,12 @@ document.addEventListener('DOMContentLoaded', () => {
         formData.append('prompt', prompt);
         formData.append('size', imageSize.value);
         formData.append('ratio', imageRatio.value);
-        formData.append('mode', imageRefs.files.length > 0 ? 'image' : 'text');
         for (const file of imageRefs.files) {
             formData.append('referenceImages', file);
         }
 
         try {
-            const response = await fetch('/api/generate-image', {
-                method: 'POST',
-                body: formData,
-            });
+            const response = await fetch('/api/generate-image', { method: 'POST', body: formData });
             const data = await response.json();
             if (!response.ok) throw new Error(data.error || 'فشل التوليد');
 
@@ -93,20 +89,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const prompt = videoPrompt.value.trim();
         if (!prompt) return alert('يرجى إدخال وصف للفيديو.');
 
-        // التحقق من الإطارات الرئيسية
-        if (videoMode.value === 'keyframe' && videoRefs.files.length < 2) {
-            return alert('وضع الإطارات الرئيسية يتطلب صورتين على الأقل (الإطار الأول والأخير).');
+        // التحقق من الإطارات إذا كان الوضع "صورة إلى فيديو"
+        if (videoMode.value === 'keyframe' && videoRefs.files.length === 0) {
+            return alert('وضع "صورة إلى فيديو" يتطلب اختيار صورة واحدة على الأقل.');
         }
 
-        // إيقاف أي polling سابق
         if (pollingInterval) clearInterval(pollingInterval);
 
         btnGenVideo.disabled = true;
-        btnGenVideo.textContent = 'جاري بدء المهمة...';
+        btnGenVideo.textContent = 'جاري الرفع والبدء...';
         videoResult.classList.add('hidden');
         videoProgress.classList.remove('hidden');
         videoProgressBar.style.width = '0%';
-        videoStatusText.textContent = 'جاري إرسال الطلب...';
+        videoStatusText.textContent = 'جاري إرسال الطلب (قد يستغرق رفع الصور ثوانٍ)...';
 
         const formData = new FormData();
         formData.append('prompt', prompt);
@@ -118,17 +113,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            const response = await fetch('/api/generate-video', {
-                method: 'POST',
-                body: formData,
-            });
+            const response = await fetch('/api/generate-video', { method: 'POST', body: formData });
             const data = await response.json();
             if (!response.ok) throw new Error(data.error || 'فشل بدء المهمة');
 
             const videoId = data.video_id;
-            videoStatusText.textContent = 'تم إنشاء المهمة، جاري المعالجة...';
+            videoStatusText.textContent = 'تم بدء المعالجة، جاري التوليد...';
 
-            // بدء Polling كل 2 ثانية
             pollingInterval = setInterval(async () => {
                 try {
                     const statusRes = await fetch(`/api/video-status?video_id=${videoId}`);
@@ -154,7 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     alert('خطأ في متابعة الحالة: ' + pollError.message);
                     videoProgress.classList.add('hidden');
                 }
-            }, 2000);
+            }, 3000); // التحقق كل 3 ثوانٍ
 
         } catch (error) {
             alert('خطأ: ' + error.message);
