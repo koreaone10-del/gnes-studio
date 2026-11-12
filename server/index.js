@@ -54,12 +54,13 @@ app.post('/api/generate-image', upload.array('referenceImages', 5), async (req, 
   }
 });
 
-// ---------- توليد الفيديو (الحل الجذري: Base64 مباشر) ----------
+// ---------- توليد الفيديو (بناء طلب ديناميكي) ----------
 app.post('/api/generate-video', upload.array('referenceImages', 5), async (req, res) => {
   try {
     const { prompt, mode, seconds, ratio } = req.body;
     if (!prompt) return res.status(400).json({ error: 'البرومبت مطلوب.' });
 
+    // 1. بناء الحمولة الأساسية (بدون أي حقول صور مطلقاً)
     const payload = {
       model: 'agnes-video-2.5-flash',
       prompt: prompt,
@@ -70,29 +71,25 @@ app.post('/api/generate-video', upload.array('referenceImages', 5), async (req, 
       n: 1,
     };
 
-    // معالجة الصور حسب الوضع باستخدام Base64 مباشرة
+    // 2. إضافة حقول الصور فقط إذا كان النمط يتطلب ذلك
     if (mode === 'keyframe') {
       if (!req.files || req.files.length === 0) {
         return res.status(400).json({ error: 'وضع "صورة إلى فيديو" يتطلب رفع صورة واحدة على الأقل.' });
       }
+      payload.first_frame = `data:${req.files[0].mimetype};base64,${req.files[0].buffer.toString('base64')}`;
       
-      // تحويل الصورة الأولى إلى Base64 Data URI
-      const firstFrameBase64 = `data:${req.files[0].mimetype};base64,${req.files[0].buffer.toString('base64')}`;
-      payload.first_frame = firstFrameBase64;
-
-      // إذا تم رفع صورة ثانية، نضعها كإطار أخير
       if (req.files.length > 1) {
-        const lastFrameBase64 = `data:${req.files[1].mimetype};base64,${req.files[1].buffer.toString('base64')}`;
-        payload.last_frame = lastFrameBase64;
+        payload.last_frame = `data:${req.files[1].mimetype};base64,${req.files[1].buffer.toString('base64')}`;
       }
-    } else if (mode === 'reference' && req.files && req.files.length > 0) {
-      // وضع المراجع البصرية: التوثيق يشير إلى أن images مصفوفة من الكائنات
-      // لضمان التوافق، سنرسل الروابط كـ Base64 إذا كان ذلك مدعوماً، وإلا سنستخدم الروابط
-      // لكن الأفضل هنا إرسالها كـ Base64 أيضاً لأن Agnes يدعم ذلك
+    } else if (mode === 'reference') {
+      if (!req.files || req.files.length === 0) {
+        return res.status(400).json({ error: 'وضع "المراجع البصرية" يتطلب رفع صورة واحدة على الأقل.' });
+      }
       payload.images = req.files.map(file => 
         `data:${file.mimetype};base64,${file.buffer.toString('base64')}`
       );
     }
+    // في وضع "text"، لا نضيف أي شيء. الحمولة تبقى نظيفة تماماً.
 
     const createResponse = await agnesClient.post('/videos', payload);
     const videoId = createResponse.data.video_id || createResponse.data.id || createResponse.data.task_id;
@@ -124,7 +121,7 @@ app.get('/api/video-status', async (req, res) => {
     const data = response.data;
     res.json({
       status: data.status,
-      url: data.url || null,
+      url: data.url || (data.metadata && data.metadata.url) || null,
       progress: data.progress || 0,
     });
   } catch (error) {
