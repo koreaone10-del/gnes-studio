@@ -19,7 +19,6 @@ body {
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* تخصيص شريط التمرير */
 ::-webkit-scrollbar {
     width: 8px;
 }
