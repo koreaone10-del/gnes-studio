@@ -3,6 +3,7 @@ const express = require('express');
 const multer = require('multer');
 const axios = require('axios');
 const path = require('path');
+const FormData = require('form-data'); // لرفع الصور
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -26,10 +27,29 @@ const agnesClient = axios.create({
   },
 });
 
-// ---------- توليد الصور (هذا الجزء يعمل بشكل صحيح) ----------
+// دالة مساعدة لرفع الصور إلى خدمة استضافة مجانية (0x0.st)
+async function uploadImageToTempHost(file) {
+  try {
+    const form = new FormData();
+    form.append('file', file.buffer, {
+      filename: file.originalname,
+      contentType: file.mimetype,
+    });
+    const response = await axios.post('https://0x0.st', form, {
+      headers: { ...form.getHeaders() },
+      maxBodyLength: Infinity,
+    });
+    return response.data.trim(); // إرجاع الرابط العام
+  } catch (error) {
+    console.error('خطأ في رفع الصورة:', error.message);
+    throw new Error('فشل رفع الصورة إلى خادم مؤقت.');
+  }
+}
+
+// ---------- توليد الصور ----------
 app.post('/api/generate-image', upload.array('referenceImages', 5), async (req, res) => {
   try {
-    const { prompt, size, ratio, mode } = req.body;
+    const { prompt, size, ratio } = req.body;
     if (!prompt) return res.status(400).json({ error: 'البرومبت مطلوب.' });
 
     const payload = {
@@ -41,75 +61,69 @@ app.post('/api/generate-image', upload.array('referenceImages', 5), async (req, 
     };
 
     if (req.files && req.files.length > 0) {
-      payload.extra_body.image = req.files.map(file => 
-        `data:${file.mimetype};base64,${file.buffer.toString('base64')}`
-      );
+      const imageUrls = await Promise.all(req.files.map(file => uploadImageToTempHost(file)));
+      payload.extra_body.image = imageUrls;
     }
 
     const response = await agnesClient.post('/images/generations', payload);
     res.json({ url: response.data.data[0].url });
   } catch (error) {
     console.error('خطأ في توليد الصورة:', error.response?.data || error.message);
-    res.status(500).json({ error: 'فشل توليد الصورة.' });
+    res.status(500).json({ error: error.message || 'فشل توليد الصورة.' });
   }
 });
 
-// ---------- توليد الفيديو (تم تصحيحه) ----------
+// ---------- توليد الفيديو ----------
 app.post('/api/generate-video', upload.array('referenceImages', 5), async (req, res) => {
   try {
     const { prompt, mode, seconds, ratio } = req.body;
     if (!prompt) return res.status(400).json({ error: 'البرومبت مطلوب.' });
 
-    // بناء الحمولة (Payload) وفقاً للتوثيق الرسمي
     const payload = {
       model: 'agnes-video-2.5-flash',
       prompt: prompt,
       mode: mode || 'text',
-      seconds: String(seconds || '4'), // يجب أن تكون سلسلة نصية
-      size: '720P',                    // Flash يدعم 720P فقط
+      seconds: String(seconds || '4'),
+      size: '720P', // إجباري لنموذج Flash
       aspect_ratio: ratio || '16:9',
       n: 1,
     };
 
-    // معالجة الصور حسب الوضع
-    if (mode === 'keyframe' && req.files && req.files.length >= 1) {
-      // وضع الإطارات الرئيسية: الصورة الأولى هي الإطار الأول
-      payload.first_frame = `data:${req.files[0].mimetype};base64,${req.files[0].buffer.toString('base64')}`;
-      // إذا تم رفع صورة ثانية، تكون هي الإطار الأخير
-      if (req.files.length >= 2) {
-        payload.last_frame = `data:${req.files[1].mimetype};base64,${req.files[1].buffer.toString('base64')}`;
+    // رفع الصور أولاً للحصول على روابط عامة
+    if (req.files && req.files.length > 0) {
+      const imageUrls = await Promise.all(req.files.map(file => uploadImageToTempHost(file)));
+      
+      if (mode === 'keyframe') {
+        payload.first_frame = imageUrls[0];
+        if (imageUrls.length > 1) {
+          payload.last_frame = imageUrls[1];
+        }
+      } else if (mode === 'reference') {
+        payload.images = imageUrls;
       }
-    } else if (mode === 'reference' && req.files && req.files.length > 0) {
-      // وضع المراجع البصرية
-      payload.images = req.files.map(file => 
-        `data:${file.mimetype};base64,${file.buffer.toString('base64')}`
-      );
     }
 
-    // إرسال الطلب إلى نقطة النهاية الصحيحة لإنشاء المهمة
     const createResponse = await agnesClient.post('/videos', payload);
-    
-    // استخراج video_id من الاستجابة (التوثيق يشير إلى أنه الحقل الأساسي)
     const videoId = createResponse.data.video_id || createResponse.data.id || createResponse.data.task_id;
+    
     if (!videoId) {
-      console.error('استجابة غير متوقعة من إنشاء الفيديو:', createResponse.data);
+      console.error('استجابة غير متوقعة:', createResponse.data);
       throw new Error('لم يتم إرجاع معرف الفيديو.');
     }
 
     res.json({ video_id: videoId, status: 'pending' });
   } catch (error) {
     console.error('خطأ في إنشاء مهمة الفيديو:', error.response?.data || error.message);
-    res.status(500).json({ error: 'فشل بدء توليد الفيديو.' });
+    res.status(500).json({ error: error.response?.data?.message || error.message || 'فشل بدء توليد الفيديو.' });
   }
 });
 
-// ---------- التحقق من حالة الفيديو (تم تصحيحه) ----------
+// ---------- التحقق من حالة الفيديو ----------
 app.get('/api/video-status', async (req, res) => {
   try {
     const { video_id } = req.query;
     if (!video_id) return res.status(400).json({ error: 'معرف الفيديو مطلوب.' });
 
-    // نقطة النهاية الصحيحة للاستعلام عن الحالة (ليست تحت /v1)
     const pollUrl = `https://apihub.agnes-ai.com/agnesapi?video_id=${video_id}&model_name=agnes-video-2.5-flash`;
     
     const response = await axios.get(pollUrl, {
@@ -117,17 +131,12 @@ app.get('/api/video-status', async (req, res) => {
     });
 
     const data = response.data;
-    
-    // استخراج الحالة والرابط
-    const status = data.status;
-    const progress = data.progress || 0;
-    // الرابط موجود في المستوى الأعلى أو في metadata.url
-    const videoUrl = data.url || (data.metadata && data.metadata.url) || null;
+    const videoUrl = data.url || null;
 
     res.json({
-      status: status,
+      status: data.status,
       url: videoUrl,
-      progress: progress,
+      progress: data.progress || 0,
     });
   } catch (error) {
     console.error('خطأ في التحقق من الحالة:', error.response?.data || error.message);
