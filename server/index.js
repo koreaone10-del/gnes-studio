@@ -4,6 +4,7 @@ const express = require('express');
 const multer = require('multer');
 const axios = require('axios');
 const path = require('path');
+const { startWan22 } = require('./wan-engine');
 
 const app = express();
 const PORT = process.env.PORT || 10000;
@@ -303,6 +304,27 @@ app.post('/api/generate-video', upload.array('referenceImages', 5), async (req, 
     }
   }
 
+  // Final fallback: public Wan 2.2 image-to-video Space.
+  // This engine supports keyframe mode only.
+  if (mode === 'keyframe' && req.files?.[0]) {
+    try {
+      console.log(`Starting Wan 2.2 video (${seconds}s, keyframe)`);
+
+      const result = await startWan22({
+        tasks,
+        file: req.files[0],
+        prompt,
+        seconds
+      });
+
+      return res.json(result);
+    } catch (error) {
+      const info = safeProviderError(error);
+      failures.push({ provider: 'Wan 2.2', ...info });
+      console.error('Wan 2.2 video failed:', info);
+    }
+  }
+
   const message = failures.length
     ? failures.map(f => `${f.provider}: ${f.message}`).join(' | ')
     : 'لا يوجد مزود فيديو مضبوط. أضف AGNES_API_KEY أو MAGIC_HOUR_API_KEY في Render.';
@@ -344,6 +366,15 @@ app.get('/api/video-status', async (req, res) => {
     if (task.provider === 'magichour') {
       const response = await magicClient.get(`/video-projects/${encodeURIComponent(id)}`, { timeout: 30000 });
       return res.json(normalizeMagicStatus(response.data || {}));
+    }
+
+    if (task.provider === 'wan22') {
+      return res.json({
+        status: task.status,
+        progress: task.progress,
+        url: task.url,
+        error: task.error
+      });
     }
 
     return res.status(400).json({ error: 'مزود المهمة غير معروف.' });
